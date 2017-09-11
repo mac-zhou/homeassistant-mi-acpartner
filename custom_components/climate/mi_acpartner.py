@@ -444,8 +444,8 @@ class MiAcPartner(ClimateDevice):
             mainCode = model + "pomowiswtta0"
             isAuto = True
         else:
-            mainCode = presets[model][main]
-            stoModel = presets[model][des]
+            mainCode = presets[model]['main']
+            stoModel = presets[model]['des']
         if (model in presets) and  ('off' in presets[model])  and  ((self._current_operation == 'off') or (self._current_operation == 'idle')):
             mainCode = presets[model][off]
         else:
