@@ -28,7 +28,7 @@ _LOGGER = logging.getLogger(__name__)
 DEPENDENCIES = ['sensor']
 
 DEFAULT_TOLERANCE = 0.3
-DEFAULT_NAME = 'Mi Partner'
+DEFAULT_NAME = 'Mi ACpartner'
 
 DEFAULT_TIMEOUT = 10
 DEFAULT_RETRY = 3
@@ -118,7 +118,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 
 
 def setup_platform(hass, config, add_devices_callback, discovery_info=None):
-    """Set up the smart mi accpartner platform."""
+    """Set up the smart mi acpartner platform."""
     host = config.get(CONF_HOST)
     name = config.get(CONF_NAME) or DEFAULT_NAME
     token = config.get(CONF_TOKEN)
@@ -126,7 +126,7 @@ def setup_platform(hass, config, add_devices_callback, discovery_info=None):
     target_temp = config.get(CONF_TARGET_TEMP)
 
     add_devices_callback([
-        MiAcPartner(hass, name, target_temp, None, None, None, None, None,
+        MiAcPartner(hass, name, target_temp, None, None, None, 'Auto', None,
             None, 'off', None, DEFAULT_MAX_TMEP, DEFAULT_MIN_TMEP,host,
             token, sensor_entity_id),
     ])
@@ -150,7 +150,14 @@ class ClimateStatus:
         return self.data[1][3:4]
     @property
     def wind_force(self):
-        return self.data[1][4:5]
+        if self.data[1][4:5] == '0':
+            return 'Low'
+        elif self.data[1][4:5] == '1':
+            return 'Medium'
+        elif self.data[1][4:5] == '2':
+            return 'High'
+        else:
+            return 'Auto'
     @property
     def sweep(self):
         return self.data[1][5:6]
@@ -195,12 +202,12 @@ class MiAcPartner(ClimateDevice):
         self._current_operation = self._state.operation
 
         self._current_humidity = current_humidity
-        self._current_fan_mode = current_fan_mode
+        self._current_fan_mode = self._state.wind_force
         self._aux = aux
         self._current_swing_mode = current_swing_mode
-        self._fan_list = ['On Low', 'On High', 'Auto Low', 'Auto High', 'Off']
+        self._fan_list = ['Low', 'Medium', 'High', 'Auto']
         self._operation_list = ['heat', 'cool', 'auto', 'off']
-        self._swing_list = ['Auto', '1', '2', '3', 'Off']
+        self._swing_list = ['On', 'Off']
         self._target_temperature_high = target_temp_high
         self._target_temperature_low = target_temp_low
         self._max_temp = target_temp_high + 1
@@ -244,7 +251,8 @@ class MiAcPartner(ClimateDevice):
         self.climate_get_state()
         self._current_operation = self._state.operation
         self._target_temperature = self._state.temp
-        _LOGGER.info('Sync climate status, operation: %s , temperature: %s', self._state.operation, self._state.temp )
+        self._current_fan_mode = self._state.wind_force
+        _LOGGER.info('Sync climate status, acmodel: %s, operation: %s , temperature: %s, fan: %s', self._state.acmodel, self._state.operation, self._state.temp, self._state.wind_force)
         self.schedule_update_ha_state()
 
     @property
@@ -384,6 +392,7 @@ class MiAcPartner(ClimateDevice):
     def set_fan_mode(self, fan):
         """Set new target temperature."""
         self._current_fan_mode = fan
+        self.sendcmd()
         self.schedule_update_ha_state()
 
     def set_operation_mode(self, operation_mode):
@@ -472,7 +481,15 @@ class MiAcPartner(ClimateDevice):
                         moCode = '2'
                     mainCode = mainCode.replace('mo', moCode);
                 if tep == "wi":
-                    mainCode = mainCode.replace('wi', codeConfig['wi']['auto'])
+                    if self._current_fan_mode == 'Low':
+                        wiCode = '0'
+                    elif self._current_fan_mode == 'Medium':
+                        wiCode = '1'
+                    elif self._current_fan_mode == 'High':
+                        wiCode = '2'
+                    else:
+                        wiCode = '3'
+                    mainCode = mainCode.replace('wi', wiCode);
                 if tep == "sw":
                     mainCode = mainCode.replace('sw', codeConfig['sw']['on'])
                 if tep == "li":
@@ -502,4 +519,4 @@ class MiAcPartner(ClimateDevice):
 
         self.climate.send('send_cmd', [mainCode])
 
-        _LOGGER.info(mainCode)
+        _LOGGER.info('Set Climate , acmodel: %s, operation: %s , temperature: %s, sendCode: %s', self._state.acmodel, self._state.operation, self._state.temp, mainCode )
