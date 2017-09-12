@@ -390,6 +390,7 @@ class MiAcPartner(ClimateDevice):
     def set_swing_mode(self, swing_mode):
         """Set new target temperature."""
         self._current_swing_mode = swing_mode
+        self.sendcmd()
         self.schedule_update_ha_state()
 
     def set_fan_mode(self, fan):
