@@ -37,8 +37,9 @@ DEFAULT_MAX_TMEP = 30
 DEFAULT_STEP = 1
 
 CONF_SENSOR = 'target_sensor'
-CONF_TARGET_TEMP = 'target_temp'
-DEFAULT_TIMEOUT = 10
+# CONF_TARGET_TEMP = 'target_temp'
+CONF_SYNC = 'sync'
+CONF_CUSTOMIZE = 'customize'
 
 presets = {
     "default":{
@@ -111,8 +112,9 @@ presets = {
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_HOST): cv.string,
     vol.Optional(CONF_TIMEOUT, default=DEFAULT_TIMEOUT): cv.positive_int,
-    vol.Required(CONF_SENSOR): cv.entity_id,
-    vol.Optional(CONF_TARGET_TEMP): vol.Coerce(float)
+    vol.Required(CONF_SENSOR, default=None): cv.entity_id,
+    # vol.Optional(CONF_TARGET_TEMP, default=26): vol.Coerce(float),
+    vol.Optional(CONF_SYNC, default=15): cv.positive_int
 })
 
 
@@ -122,12 +124,15 @@ def setup_platform(hass, config, add_devices_callback, discovery_info=None):
     name = config.get(CONF_NAME) or DEFAULT_NAME
     token = config.get(CONF_TOKEN)
     sensor_entity_id = config.get(CONF_SENSOR)
-    target_temp = config.get(CONF_TARGET_TEMP)
+    # target_temp = config.get(CONF_TARGET_TEMP)
+    sync = config.get(CONF_SYNC)
+    customize = config.get(CONF_CUSTOMIZE)
+    _LOGGER.info(customize['fan'].keys())
 
     add_devices_callback([
-        MiAcPartner(hass, name, target_temp, None, None, None, 'auto', None,
-            'off', 'off', None, DEFAULT_MAX_TMEP, DEFAULT_MIN_TMEP,host,
-            token, sensor_entity_id),
+        MiAcPartner(hass, name, None, None, None, 'auto', None,
+            'off', 'off', None, DEFAULT_MAX_TMEP, DEFAULT_MIN_TMEP, host,
+            token, sensor_entity_id, sync, customize),
     ])
 
 class ClimateStatus:
@@ -181,11 +186,11 @@ class ClimateStatus:
 class MiAcPartner(ClimateDevice):
     """Representation of a demo climate device."""
 
-    def __init__(self, hass, name, target_temperature, target_humidity,
+    def __init__(self, hass, name, target_humidity,
                 away, hold, current_fan_mode, current_humidity,
                 current_swing_mode, current_operation, aux,
                 target_temp_high, target_temp_low,host,
-                token, sensor_entity_id):
+                token, sensor_entity_id, sync, customize):
 
         """Initialize the climate device."""
         self.hass = hass
@@ -195,6 +200,8 @@ class MiAcPartner(ClimateDevice):
         self._hold = hold
         self.host = host
         self.token = token
+        self.sync = sync
+        self._customize = customize
 
         self._climate = None
         self._state = None
@@ -204,12 +211,26 @@ class MiAcPartner(ClimateDevice):
         self._current_operation = self._state.operation
 
         self._current_humidity = current_humidity
-        self._current_fan_mode = self._state.wind_force
         self._aux = aux
-        self._current_swing_mode = self._state.sweep
-        self._fan_list = ['low', 'medium', 'high', 'auto']
         self._operation_list = ['heat', 'cool', 'auto', 'off']
-        self._swing_list = ['on', 'off']
+
+        if self._customize['fan']:
+            self._customize_fan_list = list(self._customize['fan'])
+            self._customize_fan_list.append('customize_fan')
+            self._fan_list = self._customize_fan_list
+            self._current_fan_mode = 'customize_fan'
+        else:
+            self._fan_list = ['low', 'medium', 'high', 'auto']
+            self._current_fan_mode = self._state.wind_force
+
+        if self._customize['swing']:
+            self._customize_swing_list = list(self._customize['swing'])
+            self._customize_swing_list.append('customize_swing')
+            self._swing_list = self._customize_swing_list
+            self._current_swing_mode = 'customize_swing'
+        else:  
+            self._swing_list = ['on', 'off']
+            self._current_swing_mode = self._state.sweep
         self._target_temperature_high = target_temp_high
         self._target_temperature_low = target_temp_low
         self._max_temp = target_temp_high + 1
@@ -218,14 +239,15 @@ class MiAcPartner(ClimateDevice):
 
         self._unit_of_measurement = TEMP_CELSIUS
         self._current_temperature = None
+        self._sensor_entity_id = sensor_entity_id
 
-        async_track_state_change(
-            hass, sensor_entity_id, self._async_sensor_changed)
-
-        sensor_state = hass.states.get(sensor_entity_id)
-        if sensor_state:
-            self._async_update_temp(sensor_state)
-        async_track_time_interval(hass, self._async_get_states, timedelta(seconds=15))
+        if sensor_entity_id:
+            async_track_state_change(hass, sensor_entity_id, self._async_sensor_changed)
+            sensor_state = hass.states.get(sensor_entity_id)
+            if sensor_state:
+                self._async_update_temp(sensor_state)
+        if sync:
+            async_track_time_interval(hass, self._async_get_states, timedelta(seconds=self.sync))
 
 
     @callback
@@ -253,8 +275,12 @@ class MiAcPartner(ClimateDevice):
         self.climate_get_state()
         self._current_operation = self._state.operation
         self._target_temperature = self._state.temp
-        self._current_fan_mode = self._state.wind_force
-        self._current_swing_mode = self._state.sweep
+        if not self._customize['fan']:
+            self._current_fan_mode = self._state.wind_force
+        if not self._customize['swing']:
+            self._current_swing_mode = self._state.sweep
+        if not self._sensor_entity_id:
+            self._current_temperature = self._state.temp
         _LOGGER.info('Sync climate status, acmodel: %s, operation: %s , temperature: %s, fan: %s, swing: %s', self._state.acmodel, self._state.operation, self._state.temp, self._state.wind_force, self._state.sweep)
         self.schedule_update_ha_state()
 
@@ -390,13 +416,19 @@ class MiAcPartner(ClimateDevice):
     def set_swing_mode(self, swing_mode):
         """Set new target temperature."""
         self._current_swing_mode = swing_mode
-        self.sendcmd()
+        if self._customize['swing']:
+            self.customize_sendcmd('swing')
+        else:
+            self.sendcmd()
         self.schedule_update_ha_state()
 
     def set_fan_mode(self, fan):
         """Set new target temperature."""
         self._current_fan_mode = fan
-        self.sendcmd()
+        if self._customize['fan']:
+            self.customize_sendcmd('fan')
+        else:
+            self.sendcmd()
         self.schedule_update_ha_state()
 
     def set_operation_mode(self, operation_mode):
@@ -523,10 +555,24 @@ class MiAcPartner(ClimateDevice):
                         temp = hex(temp)[2:].upper()
                         mainCode = mainCode.replace('t4wt', temp)
                     index += 1
+        
+        _LOGGER.info(mainCode)
         try:
             self.climate.send('send_cmd', [mainCode])
             _LOGGER.info('Change Climate Successful: acmodel: %s, operation: %s , temperature: %s, fan: %s, swing: %s, sendCode: %s', model, self._current_operation, self._target_temperature, self._current_fan_mode, self._current_swing_mode, mainCode )
         except ValueError as ex:
             _LOGGER.error('Change Climate Fail: %s', ex)
 
-        
+    def customize_sendcmd(self, customize_mode):
+        if customize_mode == 'fan' and self._current_fan_mode != 'customize_fan':
+            mainCode = self._customize['fan'][self._current_fan_mode]
+        elif customize_mode == 'swing' and self._current_swing_mode != 'customize_swing':
+            mainCode = self._customize['swing'][self._current_swing_mode]
+        else:
+            return
+        _LOGGER.info(mainCode)
+        try:
+            self.climate.send('send_cmd', [mainCode])
+            _LOGGER.info('Send Customize Code: acmodel: %s, operation: %s , temperature: %s, fan: %s, swing: %s, sendCode: %s', model, self._current_operation, self._target_temperature, self._current_fan_mode, self._current_swing_mode, mainCode )
+        except ValueError as ex:
+            _LOGGER.error('Change Climate Fail: %s', ex)
