@@ -125,8 +125,8 @@ def setup_platform(hass, config, add_devices_callback, discovery_info=None):
     target_temp = config.get(CONF_TARGET_TEMP)
 
     add_devices_callback([
-        MiAcPartner(hass, name, target_temp, None, None, None, 'Auto', None,
-            None, 'off', None, DEFAULT_MAX_TMEP, DEFAULT_MIN_TMEP,host,
+        MiAcPartner(hass, name, target_temp, None, None, None, 'auto', None,
+            'off', 'off', None, DEFAULT_MAX_TMEP, DEFAULT_MIN_TMEP,host,
             token, sensor_entity_id),
     ])
 
@@ -150,16 +150,19 @@ class ClimateStatus:
     @property
     def wind_force(self):
         if self.data[1][4:5] == '0':
-            return 'Low'
+            return 'low'
         elif self.data[1][4:5] == '1':
-            return 'Medium'
+            return 'medium'
         elif self.data[1][4:5] == '2':
-            return 'High'
+            return 'high'
         else:
-            return 'Auto'
+            return 'auto'
     @property
     def sweep(self):
-        return self.data[1][5:6]
+        if self.data[1][5:6] == '0':
+            return 'on'
+        else:
+            return 'off'
     @property
     def temp(self):
         return int(self.data[1][6:8], 16)
@@ -203,10 +206,10 @@ class MiAcPartner(ClimateDevice):
         self._current_humidity = current_humidity
         self._current_fan_mode = self._state.wind_force
         self._aux = aux
-        self._current_swing_mode = current_swing_mode
-        self._fan_list = ['Low', 'Medium', 'High', 'Auto']
+        self._current_swing_mode = self._state.sweep
+        self._fan_list = ['low', 'medium', 'high', 'auto']
         self._operation_list = ['heat', 'cool', 'auto', 'off']
-        self._swing_list = ['On', 'Off']
+        self._swing_list = ['on', 'off']
         self._target_temperature_high = target_temp_high
         self._target_temperature_low = target_temp_low
         self._max_temp = target_temp_high + 1
@@ -251,7 +254,8 @@ class MiAcPartner(ClimateDevice):
         self._current_operation = self._state.operation
         self._target_temperature = self._state.temp
         self._current_fan_mode = self._state.wind_force
-        _LOGGER.info('Sync climate status, acmodel: %s, operation: %s , temperature: %s, fan: %s', self._state.acmodel, self._state.operation, self._state.temp, self._state.wind_force)
+        self._current_swing_mode = self._state.sweep
+        _LOGGER.info('Sync climate status, acmodel: %s, operation: %s , temperature: %s, fan: %s, swing: %s', self._state.acmodel, self._state.operation, self._state.temp, self._state.wind_force, self._state.sweep)
         self.schedule_update_ha_state()
 
     @property
@@ -480,11 +484,11 @@ class MiAcPartner(ClimateDevice):
                         moCode = '2'
                     mainCode = mainCode.replace('mo', moCode);
                 if tep == "wi":
-                    if self._current_fan_mode == 'Low':
+                    if self._current_fan_mode == 'low':
                         wiCode = '0'
-                    elif self._current_fan_mode == 'Medium':
+                    elif self._current_fan_mode == 'medium':
                         wiCode = '1'
-                    elif self._current_fan_mode == 'High':
+                    elif self._current_fan_mode == 'high':
                         wiCode = '2'
                     else:
                         wiCode = '3'
@@ -515,7 +519,10 @@ class MiAcPartner(ClimateDevice):
                         temp = hex(temp)[2:].upper()
                         mainCode = mainCode.replace('t4wt', temp)
                     index += 1
+        try:
+            self.climate.send('send_cmd', [mainCode])
+            _LOGGER.info('Change Climate Successful: acmodel: %s, operation: %s , temperature: %s, fan: %s, swing: %s, sendCode: %s', model, self._current_operation, self._target_temperature, self._current_fan_mode, self._current_swing_mode, mainCode )
+        except ValueError as ex:
+            _LOGGER.error('Change Climate Fail: %s', ex)
 
-        self.climate.send('send_cmd', [mainCode])
-
-        _LOGGER.info('Set Climate , acmodel: %s, operation: %s , temperature: %s, sendCode: %s', self._state.acmodel, self._state.operation, self._state.temp, mainCode )
+        
