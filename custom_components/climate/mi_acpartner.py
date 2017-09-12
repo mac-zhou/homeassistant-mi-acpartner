@@ -7,7 +7,6 @@ https://home-assistant.io/components/demo/
 import logging
 import asyncio
 from datetime import timedelta
-import miio
 import voluptuous as vol
 
 from homeassistant.core import callback
@@ -456,7 +455,7 @@ class MiAcPartner(ClimateDevice):
             mainCode = presets[model]['main']
             stoModel = presets[model]['des']
         if (model in presets) and  ('off' in presets[model])  and  ((self._current_operation == 'off') or (self._current_operation == 'idle')):
-            mainCode = presets[model][off]
+            mainCode = presets[model]['off']
         else:
             codeConfig = presets['default']
             valueCont = presets['default']['VALUE']
