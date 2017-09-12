@@ -113,7 +113,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_HOST): cv.string,
     vol.Optional(CONF_TIMEOUT, default=DEFAULT_TIMEOUT): cv.positive_int,
     vol.Required(CONF_SENSOR, default=None): cv.entity_id,
-    # vol.Optional(CONF_TARGET_TEMP, default=26): vol.Coerce(float),
+    vol.Optional(CONF_CUSTOMIZE, default=None): dict,
     vol.Optional(CONF_SYNC, default=15): cv.positive_int
 })
 
@@ -213,7 +213,7 @@ class MiAcPartner(ClimateDevice):
         self._aux = aux
         self._operation_list = ['heat', 'cool', 'auto', 'off']
 
-        if self._customize['fan']:
+        if self._customize and ('fan' in self._customize):
             self._customize_fan_list = list(self._customize['fan'])
             self._fan_list = self._customize_fan_list
             self._current_fan_mode = 'idle'
@@ -221,7 +221,7 @@ class MiAcPartner(ClimateDevice):
             self._fan_list = ['low', 'medium', 'high', 'auto']
             self._current_fan_mode = self._state.wind_force
 
-        if self._customize['swing']:
+        if self._customize and ('swing' in self._customize):
             self._customize_swing_list = list(self._customize['swing'])
             self._swing_list = self._customize_swing_list
             self._current_swing_mode = 'idle'
@@ -272,9 +272,9 @@ class MiAcPartner(ClimateDevice):
         self.climate_get_state()
         self._current_operation = self._state.operation
         self._target_temperature = self._state.temp
-        if not self._customize['fan']:
+        if (not self._customize) or  ( self._customize and 'fan' not in self._customize):
             self._current_fan_mode = self._state.wind_force
-        if not self._customize['swing']:
+        if (not self._customize) or  ( self._customize and 'swing' not in self._customize):
             self._current_swing_mode = self._state.sweep
         if not self._sensor_entity_id:
             self._current_temperature = self._state.temp
@@ -413,7 +413,7 @@ class MiAcPartner(ClimateDevice):
     def set_swing_mode(self, swing_mode):
         """Set new target temperature."""
         self._current_swing_mode = swing_mode
-        if self._customize['swing']:
+        if self._customize and ('swing' in self._customize) :
             self.customize_sendcmd('swing')
         else:
             self.sendcmd()
@@ -422,7 +422,7 @@ class MiAcPartner(ClimateDevice):
     def set_fan_mode(self, fan):
         """Set new target temperature."""
         self._current_fan_mode = fan
-        if self._customize['fan']:
+        if self._customize and ('fan' in self._customize):
             self.customize_sendcmd('fan')
         else:
             self.sendcmd()
@@ -553,7 +553,7 @@ class MiAcPartner(ClimateDevice):
                         mainCode = mainCode.replace('t4wt', temp)
                     index += 1
         
-        _LOGGER.info(mainCode)
+
         try:
             self.climate.send('send_cmd', [mainCode])
             _LOGGER.info('Change Climate Successful: acmodel: %s, operation: %s , temperature: %s, fan: %s, swing: %s, sendCode: %s', model, self._current_operation, self._target_temperature, self._current_fan_mode, self._current_swing_mode, mainCode )
@@ -562,13 +562,13 @@ class MiAcPartner(ClimateDevice):
 
     def customize_sendcmd(self, customize_mode):
         model = self._state.acmodel
-        if customize_mode == 'fan' and self._current_fan_mode != 'customize_fan':
+        if customize_mode == 'fan' and self._current_fan_mode != 'idle':
             mainCode = self._customize['fan'][self._current_fan_mode]
-        elif customize_mode == 'swing' and self._current_swing_mode != 'customize_swing':
+        elif customize_mode == 'swing' and self._current_swing_mode != 'idle':
             mainCode = self._customize['swing'][self._current_swing_mode]
         else:
             return
-        _LOGGER.info(mainCode)
+
         try:
             if str(mainCode)[0:2] == "01":
                 self.climate.send('send_cmd', [mainCode])
