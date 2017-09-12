@@ -494,7 +494,10 @@ class MiAcPartner(ClimateDevice):
                         wiCode = '3'
                     mainCode = mainCode.replace('wi', wiCode);
                 if tep == "sw":
-                    mainCode = mainCode.replace('sw', codeConfig['sw']['on'])
+                    if self._current_swing_mode = 'on':
+                        mainCode = mainCode.replace('sw', codeConfig['sw']['on'])
+                    else: 
+                        mainCode = mainCode.replace('sw', codeConfig['sw']['off'])
                 if tep == "li":
                     mainCode = mainCode
                     # mainCode = mainCode.replace('li', codeConfig['li']['on'])
