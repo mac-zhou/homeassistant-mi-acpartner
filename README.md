@@ -17,7 +17,7 @@
   - 在17-30度之间调整空调温度（默认情况）。
   - 温度如果调节到31度或者16度即是关闭空调。
   - 制冷，制热，自动模式支持。
-  - 目前只支持控制模式和温度，改变风力，改变扫风状态还在慢慢捣鼓中。
+  - 风力，扫风状态(目前只支持开/关)支持。
   - 目前暂时不支持自定义空调码，都是根据 homebridge-mi-acpartner 中 [presets.json](https://github.com/LASER-Yi/homebridge-mi-acpartner/blob/master/presets.json) 定义而来
 
 ### Config（配置）
