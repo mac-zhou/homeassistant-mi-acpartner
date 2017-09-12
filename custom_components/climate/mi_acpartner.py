@@ -127,7 +127,6 @@ def setup_platform(hass, config, add_devices_callback, discovery_info=None):
     # target_temp = config.get(CONF_TARGET_TEMP)
     sync = config.get(CONF_SYNC)
     customize = config.get(CONF_CUSTOMIZE)
-    _LOGGER.info(customize['fan'].keys())
 
     add_devices_callback([
         MiAcPartner(hass, name, None, None, None, 'auto', None,
@@ -216,18 +215,16 @@ class MiAcPartner(ClimateDevice):
 
         if self._customize['fan']:
             self._customize_fan_list = list(self._customize['fan'])
-            self._customize_fan_list.append('customize_fan')
             self._fan_list = self._customize_fan_list
-            self._current_fan_mode = 'customize_fan'
+            self._current_fan_mode = 'idle'
         else:
             self._fan_list = ['low', 'medium', 'high', 'auto']
             self._current_fan_mode = self._state.wind_force
 
         if self._customize['swing']:
             self._customize_swing_list = list(self._customize['swing'])
-            self._customize_swing_list.append('customize_swing')
             self._swing_list = self._customize_swing_list
-            self._current_swing_mode = 'customize_swing'
+            self._current_swing_mode = 'idle'
         else:  
             self._swing_list = ['on', 'off']
             self._current_swing_mode = self._state.sweep
@@ -564,6 +561,7 @@ class MiAcPartner(ClimateDevice):
             _LOGGER.error('Change Climate Fail: %s', ex)
 
     def customize_sendcmd(self, customize_mode):
+        model = self._state.acmodel
         if customize_mode == 'fan' and self._current_fan_mode != 'customize_fan':
             mainCode = self._customize['fan'][self._current_fan_mode]
         elif customize_mode == 'swing' and self._current_swing_mode != 'customize_swing':
@@ -572,7 +570,10 @@ class MiAcPartner(ClimateDevice):
             return
         _LOGGER.info(mainCode)
         try:
-            self.climate.send('send_cmd', [mainCode])
+            if str(mainCode)[0:2] == "01":
+                self.climate.send('send_cmd', [mainCode])
+            else:
+                self.climate.send('send_ir_code', [mainCode])
             _LOGGER.info('Send Customize Code: acmodel: %s, operation: %s , temperature: %s, fan: %s, swing: %s, sendCode: %s', model, self._current_operation, self._target_temperature, self._current_fan_mode, self._current_swing_mode, mainCode )
         except ValueError as ex:
             _LOGGER.error('Change Climate Fail: %s', ex)
