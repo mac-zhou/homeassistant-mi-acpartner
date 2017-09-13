@@ -6,7 +6,7 @@
 
 同时参考了[HomeAssistant论坛](https://bbs.hassbian.com/)各路大神们几个空调插件的做法，此处不在一一全表，同样感谢。
 
-说到底，我只是个搬运工(^-^)
+说到底，其实我只是个搬运工(^-^)
 ### Feature(功能）
 
 * 开关空调
@@ -45,11 +45,11 @@
 基本配置
 ```yaml
 climate:
-    - platform: mi_acpartner
-      name: mi_acpartner
-      host: 10.0.0.234
-      token: 8171378a40b1a77ee7a8254b15c75cfc
-      target_sensor: sensor.temperature_158d00015aefc4
+  - platform: mi_acpartner
+    name: mi_acpartner
+    host: 10.0.0.234
+    token: 8171378a40b1a77ee7a8254b15c75cfc
+    target_sensor: sensor.temperature_158d00015aefc4
 ```
 
 自定义空调码或红外码
@@ -60,7 +60,7 @@ climate:
   - platform: mi_acpartner
     name: mi_acpartner
     host: 10.0.0.234
-    token: 1378a40b1a77ee7a8254b15c75cfb
+    token: 9878a40b1a77ee7a8254b15c75cfb
     target_sensor: sensor.temperature_158d00015a
     sync: 60
     customize:
