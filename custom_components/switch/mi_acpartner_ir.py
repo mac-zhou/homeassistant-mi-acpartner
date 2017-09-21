@@ -25,7 +25,7 @@ _LOGGER = logging.getLogger(__name__)
 DEVICE_DEFAULT_NAME = 'mi_acpartner_ir'
 SWITCH_DEFAULT_NAME = 'mi_acpartner_ir_switch'
 DOMAIN = "mi_acpartner_ir"
-DEFAULT_TIMEOUT = 10
+DEFAULT_TIMEOUT = 30
 DEFAULT_RETRY = 3
 SERVICE_LEARN = "learn_command"
 SERVICE_SEND = "send_packet"
@@ -64,19 +64,18 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
 
         # key = randint(1,1000000)
 
-        # ir_remote.send("miIO.ir_learn", {'key': str(key)})
+        ir_remote.send('start_ir_learn', [30])
 
         _LOGGER.info("Press the key you want HASS to learn")
         start_time = utcnow()
         while (utcnow() - start_time) < timedelta(seconds=DEFAULT_TIMEOUT):
-            res = ir_remote.send('get_ir_learn_result', [])
-            _LOGGER.error(type(res["code"]))
-            _LOGGER.error(res["code"])
-            if res["code"]:
-                log_msg = 'Recieved packet is: %s' % res["code"]
+            code = ir_remote.send('get_ir_learn_result', [])
+            if code[0] != '(null)':
+                log_msg = 'Recieved packet is: %s' % code[0]
                 _LOGGER.info(log_msg)
                 persistent_notification.async_create(hass, log_msg,
                                                      title='Mi_ACpartner switch')
+                ir_remote.send('end_ir_learn', [30])
                 return
             yield from asyncio.sleep(1, loop=hass.loop)
         _LOGGER.error('Did not received any signal.')
@@ -115,7 +114,8 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
                 ir_remote,
                 device_config.get(CONF_NAME, object_id),
                 device_config.get(CONF_COMMAND_ON),
-                device_config.get(CONF_COMMAND_OFF)
+                device_config.get(CONF_COMMAND_OFF),
+                'mdi:volume-high'
             )
         )
 
@@ -124,13 +124,19 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
 class ChuangmiIRSwitch(SwitchDevice):
     """Representation of an Chuangmi switch."""
 
-    def __init__(self, device, name, command_on, command_off):
+    def __init__(self, device, name, command_on, command_off, icon):
         """Initialize the switch."""
         self._name = name
         self._state = False
         self._command_on = command_on or None
         self._command_off = command_off or None
         self._device = device
+        self._icon = icon
+
+    @property
+    def icon(self):
+        """Return the icon to use for device if any."""
+        return self._icon
 
     @property
     def name(self):
