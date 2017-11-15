@@ -21,7 +21,7 @@ from homeassistant.helpers.event import (
     async_track_state_change, async_track_time_interval)
 import homeassistant.helpers.config_validation as cv
 
-REQUIREMENTS = ['python-miio==0.0.11']
+REQUIREMENTS = ['python-miio>=0.0.11']
 _LOGGER = logging.getLogger(__name__)
 
 DEPENDENCIES = ['sensor']
