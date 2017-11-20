@@ -286,7 +286,7 @@ class MiAcPartner(ClimateDevice):
         import miio
         if not self._climate:
             _LOGGER.info("initializing with host %s token %s" % (self.host, self.token))
-            self._climate = miio.device(self.host, self.token)
+            self._climate = miio.Device(self.host, self.token)
         return self._climate
 
     @property
