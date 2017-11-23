@@ -14,6 +14,11 @@ ha_iot_class: "Local Polling"
 
 The `xiaomi_miio` platform allows you to control the state of your Xiaomi and Aqara Air Conditioner Partner.
 
+Supported model:
+
+Aqara Air Conditioner Partner: `KTBL01LM`
+Mi Air Conditioner Partner: `KTBL02LM`
+
 Currently, the supported features are `set_temperature`, `set_speed`, `set_operation_mode`, `set_swing_mode`, `set_fan_mode`.
 
 You need Access Token to add this device into Home Assistant. There are two ways to get it:
@@ -34,16 +39,16 @@ To add a Xiaomi AC Partner to your installation, add the following to your confi
 light:
   - platform: xiaomi_miio
     name: Xiaomi AC Partner
-    host: 192.168.0.66
+    host: 192.168.0.1
     token: YOUR_TOKEN
     target_sensor: 
     customize:
 ```
 
 Configuration variables:
-- **host** (*Required*): The IP of your light.
-- **token** (*Required*): The API token of your light.
-- **name** (*Optional*): The name of your light.
+- **host** (*Required*): The IP of your device.
+- **token** (*Required*): The API token of your device.
+- **name** (*Optional*): The name of your device.
 - **target_sensor**(*Optional*): Entity_ID of component fetching present temperature. Configure this variable when your air conditioner shipped without own temperature sensor. 
 - **customize**(*Optional*): Custom IR code for swing and fan mode.
 
@@ -51,9 +56,9 @@ Full `configuration.yaml`:
 
 ```yaml
 climate:
-  - platform: mi_acpartner
-    name: mi_acpartner
-    host: 10.0.0.234
+  - platform: xiaomi_miio
+    name: Xiaomi AC Partner
+    host: 192.168.0.1
     token: YOUR_TOKEN
     target_sensor: sensor.temperature_158d00015a
     sync: 60
