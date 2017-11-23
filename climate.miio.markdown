@@ -7,8 +7,7 @@ sidebar: true
 comments: false
 sharing: true
 footer: true
-logo: philips.png
-ha_category: Light
+ha_category: Climate
 ha_version: 0.59
 ha_iot_class: "Local Polling"
 ---
@@ -46,7 +45,7 @@ Configuration variables:
 - **token** (*Required*): The API token of your light.
 - **name** (*Optional*): The name of your light.
 - **target_sensor**(*Optional*): Entity_ID of component fetching present temperature. Configure this variable when your air conditioner shipped without own temperature sensor. 
-- **customize**(*Optional*): Custom IR code
+- **customize**(*Optional*): Custom IR code for swing and fan mode.
 
 Full `configuration.yaml`:
 
@@ -55,7 +54,7 @@ climate:
   - platform: mi_acpartner
     name: mi_acpartner
     host: 10.0.0.234
-    token: 9878a40b1a77ee7a8254b15c75cfb
+    token: YOUR_TOKEN
     target_sensor: sensor.temperature_158d00015a
     sync: 60
     customize:
