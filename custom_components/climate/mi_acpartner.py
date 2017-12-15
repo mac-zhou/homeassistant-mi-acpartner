@@ -12,7 +12,10 @@ import voluptuous as vol
 from homeassistant.core import callback
 from homeassistant.components.climate import (
     PLATFORM_SCHEMA,
-    ClimateDevice, ATTR_TARGET_TEMP_HIGH, ATTR_TARGET_TEMP_LOW)
+    ClimateDevice, ATTR_TARGET_TEMP_HIGH, ATTR_TARGET_TEMP_LOW, STATE_AUTO,
+    STATE_COOL, STATE_HEAT, SUPPORT_TARGET_TEMPERATURE,
+    SUPPORT_TARGET_TEMPERATURE_HIGH, SUPPORT_TARGET_TEMPERATURE_LOW,
+    SUPPORT_OPERATION_MODE, SUPPORT_AWAY_MODE, SUPPORT_FAN_MODE)
 from homeassistant.const import (
     TEMP_CELSIUS, TEMP_FAHRENHEIT, ATTR_TEMPERATURE, ATTR_UNIT_OF_MEASUREMENT,
     CONF_NAME, CONF_HOST, CONF_TOKEN, CONF_TIMEOUT)
@@ -40,6 +43,10 @@ CONF_SENSOR = 'target_sensor'
 # CONF_TARGET_TEMP = 'target_temp'
 CONF_SYNC = 'sync'
 CONF_CUSTOMIZE = 'customize'
+
+SUPPORT_FLAGS = (SUPPORT_TARGET_TEMPERATURE | SUPPORT_TARGET_TEMPERATURE_HIGH |
+                 SUPPORT_TARGET_TEMPERATURE_LOW | SUPPORT_OPERATION_MODE |
+                 SUPPORT_AWAY_MODE | SUPPORT_FAN_MODE)
 
 presets = {
     "default":{
@@ -312,6 +319,11 @@ class MiAcPartner(ClimateDevice):
     def name(self):
         """Return the name of the climate device."""
         return self._name
+
+    @property
+    def supported_features(self):
+        """Return the list of supported features."""
+        return SUPPORT_FLAGS
 
     @property
     def temperature_unit(self):
