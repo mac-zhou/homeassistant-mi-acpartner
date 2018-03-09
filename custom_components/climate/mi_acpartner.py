@@ -120,7 +120,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_HOST): cv.string,
     vol.Optional(CONF_TIMEOUT, default=DEFAULT_TIMEOUT): cv.positive_int,
     vol.Required(CONF_SENSOR, default=None): cv.entity_id,
-    vol.Optional(CONF_CUSTOMIZE, default=None): dict,
+    vol.Optional(CONF_CUSTOMIZE, default={}): dict,
     vol.Optional(CONF_SYNC, default=15): cv.positive_int
 })
 
